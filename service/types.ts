@@ -52,6 +52,21 @@ export type ServiceResult = {
 	error: Error | null;
 };
 
+export type SyncStatus = {
+	// Whether the note is linked to a Notion page yet.
+	linked: boolean;
+	notionPageId?: string;
+	notionPageUrl?: string;
+	obsidianLastSyncedAt?: string;
+	notionLastEditedTime?: string;
+	// Local file changed since the last recorded sync.
+	hasLocalChanges: boolean;
+	// Notion page changed since the last recorded sync.
+	hasRemoteChanges: boolean;
+	// Both sides changed: a sync would overwrite one of them.
+	conflict: boolean;
+};
+
 export type BulkUploadFileResult = {
 	fileName: string;
 	error: Error | null;

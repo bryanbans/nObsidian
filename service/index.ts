@@ -1,6 +1,6 @@
 import { TFile } from "obsidian";
 import NObsidian from "main";
-import { MarkdownWithFrontMatter, ServiceResult } from "./types";
+import { MarkdownWithFrontMatter, ServiceResult, SyncStatus } from "./types";
 import notion from "./notion";
 import {
 	updateNotionPageUrlWithWorkspaceId,
@@ -159,9 +159,61 @@ const hasNotionChangesSinceLastSync = (
 	);
 };
 
-export const pullFileFromNotion = async (
+/**
+ * Inspect the sync state of a note without mutating anything.
+ *
+ * Local-change detection is cheap (file mtime vs. recorded sync time), but
+ * remote-change detection needs a Notion round-trip, so this issues one
+ * retrievePage call when the note is linked. The GUI uses this to render
+ * status and to decide whether a conflict needs user resolution.
+ */
+export const getSyncStatus = async (
 	plugin: NObsidian,
 	file: TFile
+): Promise<ServiceResult> => {
+	const contentWithFrontMatter = await plugin.getContent(file);
+	const notionPageId = contentWithFrontMatter.notionPageId;
+
+	if (!notionPageId) {
+		const status: SyncStatus = {
+			linked: false,
+			hasLocalChanges: false,
+			hasRemoteChanges: false,
+			conflict: false,
+		};
+		return { data: status, error: null };
+	}
+
+	const pageResult = await notion.retrievePage(plugin.settings, notionPageId);
+	if (pageResult.error) return pageResult;
+
+	const hasRemoteChanges = hasNotionChangesSinceLastSync(
+		contentWithFrontMatter,
+		pageResult.data
+	);
+	const hasLocalChanges = hasLocalChangesSinceLastSync(
+		file,
+		contentWithFrontMatter
+	);
+
+	const status: SyncStatus = {
+		linked: true,
+		notionPageId,
+		notionPageUrl: contentWithFrontMatter.notionPageUrl,
+		obsidianLastSyncedAt: contentWithFrontMatter.obsidianLastSyncedAt,
+		notionLastEditedTime: pageResult.data.last_edited_time,
+		hasLocalChanges,
+		hasRemoteChanges,
+		conflict: hasLocalChanges && hasRemoteChanges,
+	};
+
+	return { data: status, error: null };
+};
+
+export const pullFileFromNotion = async (
+	plugin: NObsidian,
+	file: TFile,
+	options: { force?: boolean } = {}
 ): Promise<ServiceResult> => {
 	const contentWithFrontMatter = await plugin.getContent(file);
 	const notionPageId = contentWithFrontMatter.notionPageId;
@@ -189,7 +241,7 @@ export const pullFileFromNotion = async (
 		contentWithFrontMatter
 	);
 
-	if (hasRemoteChanges && hasLocalChanges) {
+	if (!options.force && hasRemoteChanges && hasLocalChanges) {
 		return {
 			data: null,
 			error: Error("Sync conflict: both Obsidian and Notion changed "),

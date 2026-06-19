@@ -3,6 +3,7 @@ jest.mock("../service/notion");
 
 import {
 	convertObsidianLinks,
+	getSyncStatus,
 	initializeNotionPage,
 	pullFileFromNotion,
 	runWithConcurrency,
@@ -203,5 +204,87 @@ describe("pullFileFromNotion", () => {
 
 		expect(result.error?.message).toContain("Sync conflict");
 		expect(pluginMock.updateMarkdownFile).not.toHaveBeenCalled();
+	});
+
+	it("overwrites local content when force-pulling through a conflict", async () => {
+		fileMock.stat.mtime = Date.parse("2024-01-03T00:00:00.000Z");
+		(pluginMock.getContent as jest.Mock).mockResolvedValueOnce({
+			__content: "Local body",
+			notionPageId: "page-id",
+			notionLastEditedTime: "2024-01-01T00:00:00.000Z",
+			obsidianLastSyncedAt: "2024-01-01T00:00:00.000Z",
+		});
+		(notion.retrievePageMarkdown as jest.Mock).mockResolvedValueOnce({
+			data: {
+				page: {
+					id: "page-id",
+					last_edited_time: "2024-01-02T00:00:00.000Z",
+				},
+				markdown: "Remote body",
+			},
+			error: null,
+		});
+
+		const result = await pullFileFromNotion(pluginMock, fileMock, {
+			force: true,
+		});
+
+		expect(result.error).toBeNull();
+		expect(pluginMock.updateMarkdownFile).toHaveBeenCalledWith(
+			fileMock,
+			expect.stringContaining("Remote body")
+		);
+	});
+});
+
+describe("getSyncStatus", () => {
+	let pluginMock: NObsidian;
+	let fileMock: TFile;
+
+	beforeEach(() => {
+		jest.clearAllMocks();
+		pluginMock = new NObsidian(new App(), {} as PluginManifest);
+		fileMock = new TFile();
+		fileMock.basename = "Status note";
+		fileMock.stat.mtime = Date.parse("2024-01-01T00:00:00.000Z");
+	});
+
+	it("reports an unlinked note without calling Notion", async () => {
+		(pluginMock.getContent as jest.Mock).mockResolvedValueOnce({
+			__content: "Body without front matter.",
+		});
+
+		const result = await getSyncStatus(pluginMock, fileMock);
+
+		expect(result.error).toBeNull();
+		expect(result.data.linked).toBe(false);
+		expect(result.data.conflict).toBe(false);
+		expect(notion.retrievePage).not.toHaveBeenCalled();
+	});
+
+	it("flags a conflict when both sides changed since the last sync", async () => {
+		fileMock.stat.mtime = Date.parse("2024-01-03T00:00:00.000Z");
+		(pluginMock.getContent as jest.Mock).mockResolvedValueOnce({
+			__content: "Local body",
+			notionPageId: "page-id",
+			notionPageUrl: "https://www.notion.so/page-id",
+			notionLastEditedTime: "2024-01-01T00:00:00.000Z",
+			obsidianLastSyncedAt: "2024-01-01T00:00:00.000Z",
+		});
+		(notion.retrievePage as jest.Mock).mockResolvedValueOnce({
+			data: {
+				id: "page-id",
+				last_edited_time: "2024-01-02T00:00:00.000Z",
+			},
+			error: null,
+		});
+
+		const result = await getSyncStatus(pluginMock, fileMock);
+
+		expect(result.error).toBeNull();
+		expect(result.data.linked).toBe(true);
+		expect(result.data.hasLocalChanges).toBe(true);
+		expect(result.data.hasRemoteChanges).toBe(true);
+		expect(result.data.conflict).toBe(true);
 	});
 });

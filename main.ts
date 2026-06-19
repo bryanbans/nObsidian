@@ -35,6 +35,7 @@ import {
 	syncFile,
 	uploadFile,
 } from "service";
+import { SyncView, VIEW_TYPE_SYNC } from "./view";
 
 // Define your default settings
 const DEFAULT_SETTINGS: PluginSettings = {
@@ -69,6 +70,15 @@ export default class NObsidian extends Plugin {
 			DEFAULT_SETTINGS,
 			await this.loadData()
 		);
+
+		// Register the sync side panel, ribbon icon, and opener command.
+		this.registerView(
+			VIEW_TYPE_SYNC,
+			(leaf) => new SyncView(leaf, this)
+		);
+		this.addRibbonIcon("sync", "Open Nobsidion sync panel", () => {
+			this.activateSyncView();
+		});
 
 		// Add commands to vault
 		this.addCustomCommands();
@@ -122,6 +132,28 @@ export default class NObsidian extends Plugin {
 				this.syncCurrentNote();
 			},
 		});
+
+		this.addCommand({
+			id: "open-sync-panel",
+			name: "Open sync panel",
+			callback: () => {
+				this.activateSyncView();
+			},
+		});
+	}
+
+	async activateSyncView() {
+		const { workspace } = this.app;
+
+		let leaf = workspace.getLeavesOfType(VIEW_TYPE_SYNC)[0];
+		if (!leaf) {
+			const rightLeaf = workspace.getRightLeaf(false);
+			if (!rightLeaf) return;
+			leaf = rightLeaf;
+			await leaf.setViewState({ type: VIEW_TYPE_SYNC, active: true });
+		}
+
+		workspace.revealLeaf(leaf);
 	}
 
 	registerCustomEvents() {

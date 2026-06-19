@@ -10,6 +10,10 @@ foundation with timestamp-based conflict checks.
 
 ## Features
 
+- **Sync side panel** — a dockable panel (ribbon icon or the `Open sync panel`
+  command) showing the active note's connection status, link state, last-synced
+  time, and whether each side has changed, with one-click Sync / Push / Pull,
+  explicit conflict resolution, and a rolling activity log.
 - Upload the current Obsidian note to Notion.
 - Upload the entire vault to Notion with bounded parallelism.
 - Create Notion pages for linked Obsidian notes when needed.
@@ -21,6 +25,19 @@ foundation with timestamp-based conflict checks.
 - Stop before overwriting when both Notion and Obsidian changed since the last
   recorded sync.
 
+## Sync panel
+
+Click the **sync** ribbon icon (or run `Open sync panel`) to dock the panel in
+the right sidebar. It always reflects the active note and lets you:
+
+- See connection status and whether the note is linked to a Notion page.
+- See last-synced time and whether the local file and/or Notion page changed.
+- **Sync** (safe, direction inferred from timestamps), **Push** (overwrite the
+  Notion page), or **Pull** (update the note, stops on conflict).
+- Resolve conflicts explicitly with **Keep local → Notion** or
+  **Keep Notion → local**.
+- Review a rolling log of recent sync activity.
+
 ## Commands
 
 Use Obsidian's command palette:
@@ -29,6 +46,7 @@ Use Obsidian's command palette:
 - `Upload entire vault to Notion`
 - `Pull current note from Notion`
 - `Sync current note with Notion`
+- `Open sync panel`
 
 ## Settings
 
@@ -64,10 +82,10 @@ work.
 - Notion-to-Obsidian conversion supports a conservative block subset:
   paragraphs, headings, bullets, numbered lists, todos, quotes, code blocks,
   and dividers.
-- Automatic background sync is not enabled yet. The current safe path is manual
-  command-driven pull/sync with conflict detection.
-- Conflict handling currently stops and reports the conflict; it does not yet
-  offer a merge UI.
+- Automatic background sync is not enabled yet. Syncing is driven from the sync
+  panel or the command palette.
+- Conflict resolution is a "keep one side" choice (push or force-pull); there is
+  no line-level merge UI.
 - Notion blocks outside the supported subset are skipped during pull.
 
 ## Development
