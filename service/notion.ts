@@ -26,6 +26,109 @@ import { PluginSettings, ServiceResult } from "./types";
 // Notion requires every request to pin an API version. Keep this current with
 // the latest stable release: https://developers.notion.com/reference/versioning
 const NOTION_VERSION = "2022-06-28";
+const MAX_BLOCKS_PER_APPEND = 100;
+
+type NotionBlock = {
+	id?: string;
+	type?: string;
+	[key: string]: any;
+};
+
+const getBlockChildren = (block: NotionBlock): NotionBlock[] => {
+	if (Array.isArray(block.children)) return block.children;
+	if (!block.type) return [];
+
+	const typedBlock = block[block.type];
+	if (!typedBlock || !Array.isArray(typedBlock.children)) return [];
+
+	return typedBlock.children;
+};
+
+const hasNestedChildren = (block: NotionBlock): boolean => {
+	return getBlockChildren(block).some((child) => {
+		const childChildren = getBlockChildren(child);
+		return childChildren.length > 0 || hasNestedChildren(child);
+	});
+};
+
+const removeBlockChildren = (block: NotionBlock): NotionBlock => {
+	const blockWithoutChildren = { ...block };
+	delete blockWithoutChildren.children;
+
+	if (block.type && blockWithoutChildren[block.type]) {
+		const typedBlock = { ...blockWithoutChildren[block.type] };
+		delete typedBlock.children;
+		blockWithoutChildren[block.type] = typedBlock;
+	}
+
+	return blockWithoutChildren;
+};
+
+const prepareBlockForAppend = (block: NotionBlock): NotionBlock => {
+	return hasNestedChildren(block) ? removeBlockChildren(block) : block;
+};
+
+const chunkBlocks = (blocks: NotionBlock[]): NotionBlock[][] => {
+	const chunks: NotionBlock[][] = [];
+	for (let index = 0; index < blocks.length; index += MAX_BLOCKS_PER_APPEND) {
+		chunks.push(blocks.slice(index, index + MAX_BLOCKS_PER_APPEND));
+	}
+	return chunks;
+};
+
+const appendBlockChildren = async (
+	settings: PluginSettings,
+	blockId: string,
+	blocks: NotionBlock[]
+) => {
+	const notionAPIToken = settings.notionAPIToken;
+
+	return requestUrl({
+		url: `https://api.notion.com/v1/blocks/${blockId}/children`,
+		method: "PATCH",
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${notionAPIToken}`,
+			"Notion-Version": NOTION_VERSION,
+		},
+		body: JSON.stringify({ children: blocks }),
+	});
+};
+
+const appendBlocksRecursively = async (
+	settings: PluginSettings,
+	parentBlockId: string,
+	blocks: NotionBlock[]
+) => {
+	let lastResponse = null;
+
+	for (const chunk of chunkBlocks(blocks)) {
+		const appendableBlocks = chunk.map(prepareBlockForAppend);
+		lastResponse = await appendBlockChildren(
+			settings,
+			parentBlockId,
+			appendableBlocks
+		);
+
+		const createdBlocks = lastResponse.json?.results || [];
+		for (const [index, originalBlock] of chunk.entries()) {
+			if (!hasNestedChildren(originalBlock)) continue;
+
+			const createdBlockId = createdBlocks[index]?.id;
+			if (!createdBlockId) {
+				throw Error("Notion did not return an ID for a created block");
+			}
+
+			await appendBlocksRecursively(
+				settings,
+				createdBlockId,
+				getBlockChildren(originalBlock)
+			);
+		}
+	}
+
+	return lastResponse;
+};
 
 const createEmptyPage = async (
 	settings: PluginSettings,
@@ -83,22 +186,12 @@ const addContentToPage = async (
 	content: string
 ): Promise<ServiceResult> => {
 	let res = null;
-	const notionAPIToken = settings.notionAPIToken;
 
 	const blocks = markdownToBlocks(content);
 
 	try {
-		res = await requestUrl({
-			url: `https://api.notion.com/v1/blocks/${notionPageId}/children`,
-			method: "PATCH",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${notionAPIToken}`,
-				"Notion-Version": NOTION_VERSION,
-			},
-			body: JSON.stringify({ children: blocks }),
-		});
-		return { data: res.json, error: null };
+		res = await appendBlocksRecursively(settings, notionPageId, blocks);
+		return { data: res?.json || null, error: null };
 	} catch (error) {
 		return {
 			data: res,

@@ -5,6 +5,8 @@ export class TFile {
 export class App {}
 export class PluginManifest {}
 
+export const requestUrl = jest.fn();
+
 export default {
-	requestUrl: jest.fn(),
+	requestUrl,
 };
