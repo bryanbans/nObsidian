@@ -1,8 +1,8 @@
 /*
     Created by Quan Phan (2023). Reused functions from EasyChris (2022).
 
-    This file is part of nObsidian and is licensed under the GNU General Public License v3.0.
-    Modifications by the nObsidian maintainers are tracked in the project's Git history.
+    This file is part of Notional and is licensed under the GNU General Public License v3.0.
+    Modifications by the Notional maintainers are tracked in the project's Git history.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ import { NoticeMsg } from "../static/message";
 import { icons } from "../static/icon";
 import { MarkdownWithFrontMatter } from "./types";
 
-const NOTION_PAGE_MENTION_URL_PREFIX = "nobsidian://notion-page/";
+const NOTION_PAGE_MENTION_URL_PREFIX = "notional://notion-page/";
 
 export type WikiLink = {
 	rawLink: string;

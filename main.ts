@@ -2,8 +2,8 @@
     Originally created by EasyChris (2022)
     Modified by Quan Phan (2023)
 
-    This file is part of nObsidian and is licensed under the GNU General Public License v3.0.
-    Modifications by the nObsidian maintainers are tracked in the project's Git history.
+    This file is part of Notional and is licensed under the GNU General Public License v3.0.
+    Modifications by the Notional maintainers are tracked in the project's Git history.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -92,7 +92,7 @@ export default class NObsidian extends Plugin {
 			VIEW_TYPE_SYNC,
 			(leaf) => new SyncView(leaf, this)
 		);
-		this.addRibbonIcon("sync", "Open nObsidian sync panel", () => {
+		this.addRibbonIcon("sync", "Open Notional sync panel", () => {
 			this.activateSyncView();
 		});
 
@@ -387,7 +387,7 @@ export default class NObsidian extends Plugin {
 				if (!this.conflictNotified.has(file.path)) {
 					this.conflictNotified.add(file.path);
 					new Notice(
-						`Sync conflict in “${file.basename}” — resolve it in the nObsidian sync panel.`,
+						`Sync conflict in “${file.basename}” — resolve it in the Notional sync panel.`,
 						8000
 					);
 				}

@@ -1,8 +1,8 @@
 /*
     Created by Quan Phan (2023). Reused PluginSettings from EasyChris (2022).
 
-    This file is part of nObsidian and is licensed under the GNU General Public License v3.0.
-    Modifications by the nObsidian maintainers are tracked in the project's Git history.
+    This file is part of Notional and is licensed under the GNU General Public License v3.0.
+    Modifications by the Notional maintainers are tracked in the project's Git history.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

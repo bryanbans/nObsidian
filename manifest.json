@@ -1,10 +1,10 @@
 {
-	"id": "nbsidian",
-	"name": "nObsidian",
-	"version": "1.1.1",
+	"id": "notional",
+	"name": "Notional",
+	"version": "1.1.2",
 	"minAppVersion": "0.15.0",
-	"description": "Sync your Obsidian notes to Notion pages, converting wiki-links along the way.",
+	"description": "Sync your notes to Notion pages, converting wiki-links along the way.",
 	"author": "bryanbans",
-	"authorUrl": "https://github.com/bryanbans/nObsidian",
+	"authorUrl": "https://github.com/bryanbans/Notional",
 	"isDesktopOnly": false
 }

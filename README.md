@@ -1,6 +1,6 @@
-# nObsidian
+# Notional
 
-nObsidian is a maintained fork of the abandoned Nobsidion plugin for syncing
+Notional is a maintained fork of the abandoned Nobsidion plugin for syncing
 Obsidian notes with Notion pages.
 
 The goal is a functional, usable, two-way sync tool that keeps Obsidian and
@@ -37,7 +37,7 @@ throwaway notes before trusting it with important ones.
 
 ## Quick start
 
-1. **Install** via BRAT (`bryanbans/nObsidian`, betas enabled) or by dropping the
+1. **Install** via BRAT (`bryanbans/Notional`, betas enabled) or by dropping the
    release assets into your vault — see [Installation](#installation).
 2. **Connect Notion** in the plugin settings: paste your connection token and
    click *Test*, share a Notion page with the connection, then paste that page's
@@ -47,22 +47,22 @@ throwaway notes before trusting it with important ones.
 
 ## Installation
 
-nObsidian is not yet in the Obsidian community plugin store. Install it one of
+Notional is not yet in the Obsidian community plugin store. Install it one of
 two ways:
 
 **Via BRAT (recommended — handles updates)**
 
 1. Install the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin.
-2. In BRAT, choose *Add Beta Plugin*, enter `bryanbans/nObsidian`, and allow
+2. In BRAT, choose *Add Beta Plugin*, enter `bryanbans/Notional`, and allow
    pre-releases so you receive betas.
-3. Enable **nObsidian** under *Community Plugins*.
+3. Enable **Notional** under *Community Plugins*.
 
 **Manual**
 
 1. Download `main.js`, `manifest.json`, and `styles.css` from the latest
-   [release](https://github.com/bryanbans/nObsidian/releases).
-2. Copy them into `<vault>/.obsidian/plugins/nobsidian/`.
-3. Reload Obsidian and enable **nObsidian** under *Community Plugins*.
+   [release](https://github.com/bryanbans/Notional/releases).
+2. Copy them into `<vault>/.obsidian/plugins/notional/`.
+3. Reload Obsidian and enable **Notional** under *Community Plugins*.
 
 After enabling, open the plugin settings and follow the [Setup](#setup) steps.
 
@@ -91,7 +91,7 @@ Use Obsidian's command palette:
 
 ## Setup
 
-Open **Settings → nObsidian** and follow the two steps:
+Open **Settings → Notional** and follow the two steps:
 
 1. **Connect to Notion.** Create a connection at
    [notion.so/my-integrations](https://www.notion.so/my-integrations) (choose
@@ -99,7 +99,7 @@ Open **Settings → nObsidian** and follow the two steps:
    **Test** to confirm it works. Then open the Notion page you want to use and
    share it with the connection (*••• → Connections*).
 2. **Choose where your notes go.** Paste the link of that shared page into
-   **Notion parent page link** and click **Create**. nObsidian creates a
+   **Notion parent page link** and click **Create**. Notional creates a
    database there and remembers it — no hunting for a database ID.
 
 Other settings:
@@ -118,7 +118,7 @@ Other settings:
 
 ## Sync Metadata
 
-nObsidian stores Notion sync metadata in each note's YAML front matter:
+Notional stores Notion sync metadata in each note's YAML front matter:
 
 ```yaml
 notionPageId: ...
@@ -173,7 +173,7 @@ Planned, roughly in priority order:
 - [ ] Submit to the Obsidian community plugin store after a guideline audit.
 
 Have a request? Open an issue on
-[GitHub](https://github.com/bryanbans/nObsidian/issues).
+[GitHub](https://github.com/bryanbans/Notional/issues).
 
 ## Development
 
@@ -201,4 +201,4 @@ original Nobsidion fork by Quan Phan.
 
 ## License
 
-nObsidian is released under the [GNU General Public License v3.0](LICENSE).
+Notional is released under the [GNU General Public License v3.0](LICENSE).

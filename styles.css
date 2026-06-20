@@ -1,21 +1,21 @@
-/* nObsidian sync side panel */
+/* Notional sync side panel */
 
-.nobsidian-sync {
+.notional-sync {
 	padding: 0 4px;
 }
 
-.nobsidian-sync .nob-header {
+.notional-sync .nob-header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 8px;
 }
 
-.nobsidian-sync .nob-title {
+.notional-sync .nob-title {
 	margin: 8px 0;
 }
 
-.nobsidian-sync .nob-conn {
+.notional-sync .nob-conn {
 	display: flex;
 	align-items: center;
 	gap: 6px;
@@ -24,7 +24,7 @@
 	margin-bottom: 6px;
 }
 
-.nobsidian-sync .nob-dot {
+.notional-sync .nob-dot {
 	width: 8px;
 	height: 8px;
 	border-radius: 50%;
@@ -32,27 +32,27 @@
 	flex: 0 0 auto;
 }
 
-.nobsidian-sync .nob-ok {
+.notional-sync .nob-ok {
 	background-color: var(--color-green);
 }
 
-.nobsidian-sync .nob-bad {
+.notional-sync .nob-bad {
 	background-color: var(--color-red);
 }
 
-.nobsidian-sync .nob-section {
+.notional-sync .nob-section {
 	border-top: 1px solid var(--background-modifier-border);
 	padding-top: 10px;
 	margin-top: 10px;
 }
 
-.nobsidian-sync .nob-note-name {
+.notional-sync .nob-note-name {
 	font-weight: var(--font-semibold);
 	margin-bottom: 4px;
 	overflow-wrap: anywhere;
 }
 
-.nobsidian-sync .nob-meta {
+.notional-sync .nob-meta {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
@@ -60,36 +60,36 @@
 	margin-bottom: 10px;
 }
 
-.nobsidian-sync .nob-changes {
+.notional-sync .nob-changes {
 	display: flex;
 	gap: 12px;
 }
 
-.nobsidian-sync .nob-muted {
+.notional-sync .nob-muted {
 	color: var(--text-muted);
 }
 
-.nobsidian-sync .nob-warn {
+.notional-sync .nob-warn {
 	color: var(--text-warning);
 	font-weight: var(--font-semibold);
 }
 
-.nobsidian-sync .nob-link-ext {
+.notional-sync .nob-link-ext {
 	font-size: var(--font-ui-small);
 }
 
-.nobsidian-sync .nob-settings-btn {
+.notional-sync .nob-settings-btn {
 	margin: 4px 0;
 }
 
-.nobsidian-sync .nob-actions {
+.notional-sync .nob-actions {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 6px;
 	margin-top: 8px;
 }
 
-.nobsidian-sync .nob-conflict {
+.notional-sync .nob-conflict {
 	border: 1px solid var(--text-warning);
 	border-radius: var(--radius-s);
 	padding: 8px;
@@ -97,23 +97,23 @@
 	background-color: var(--background-modifier-error-hover);
 }
 
-.nobsidian-sync .nob-activity .nob-log {
+.notional-sync .nob-activity .nob-log {
 	list-style: none;
 	margin: 6px 0 0;
 	padding: 0;
 	font-size: var(--font-ui-smaller);
 }
 
-.nobsidian-sync .nob-activity .nob-log li {
+.notional-sync .nob-activity .nob-log li {
 	padding: 2px 0;
 	overflow-wrap: anywhere;
 }
 
-.nobsidian-sync .nob-ok-text {
+.notional-sync .nob-ok-text {
 	color: var(--color-green);
 }
 
-.nobsidian-sync .nob-bad-text {
+.notional-sync .nob-bad-text {
 	color: var(--color-red);
 }
 

@@ -132,7 +132,7 @@ describe("notion.uploadFileContent", () => {
 								content: "Linked note",
 								link: {
 									type: "url",
-									url: "nobsidian://notion-page/notion-page-id",
+									url: "notional://notion-page/notion-page-id",
 								},
 							},
 						},
@@ -144,7 +144,7 @@ describe("notion.uploadFileContent", () => {
 		const result = await notion.uploadFileContent(
 			settings,
 			"page-id",
-			"See [Linked note](nobsidian://notion-page/notion-page-id)."
+			"See [Linked note](notional://notion-page/notion-page-id)."
 		);
 		const body = getPatchBodies()[0];
 

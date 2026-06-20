@@ -128,7 +128,7 @@ describe("convertObsidianLinks", () => {
 		);
 
 		expect(result).toBe(
-			"See [the linked note](nobsidian://notion-page/12345)."
+			"See [the linked note](notional://notion-page/12345)."
 		);
 		expect(pluginMock.createEmptyMarkdownFile).not.toHaveBeenCalled();
 	});

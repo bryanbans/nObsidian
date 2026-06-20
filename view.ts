@@ -1,5 +1,5 @@
 /*
-    This file is part of nObsidian and is licensed under the GNU General Public License v3.0.
+    This file is part of Notional and is licensed under the GNU General Public License v3.0.
 
     The Sync side panel: an at-a-glance view of the active note's Notion sync
     state, one-click actions (sync / push / pull), explicit conflict resolution,
@@ -23,7 +23,7 @@ import {
 } from "service";
 import { ServiceResult, SyncStatus } from "service/types";
 
-export const VIEW_TYPE_SYNC = "nobsidian-sync-view";
+export const VIEW_TYPE_SYNC = "notional-sync-view";
 
 type ActivityEntry = {
 	time: number;
@@ -80,7 +80,7 @@ export class SyncView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return "nObsidian sync";
+		return "Notional sync";
 	}
 
 	getIcon(): string {
@@ -184,10 +184,10 @@ export class SyncView extends ItemView {
 	private render(): void {
 		const root = this.contentEl;
 		root.empty();
-		root.addClass("nobsidian-sync");
+		root.addClass("notional-sync");
 
 		const header = root.createDiv({ cls: "nob-header" });
-		header.createEl("h4", { text: "nObsidian Sync", cls: "nob-title" });
+		header.createEl("h4", { text: "Notional Sync", cls: "nob-title" });
 		new ButtonComponent(header)
 			.setIcon("refresh-cw")
 			.setTooltip("Refresh status")
@@ -219,7 +219,7 @@ export class SyncView extends ItemView {
 
 		conn.createSpan({ text: "Not configured" });
 		root.createEl("p", {
-			text: "Open Settings → nObsidian and add your Notion token and database to start syncing.",
+			text: "Open Settings → Notional and add your Notion token and database to start syncing.",
 			cls: "nob-muted",
 		});
 	}

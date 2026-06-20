@@ -2,8 +2,8 @@
     Originally created by EasyChris (2022) in main.ts
     Extracted to settingTab.ts and modified by Quan Phan (2023)
 
-    This file is part of nObsidian and is licensed under the GNU General Public License v3.0.
-    Modifications by the nObsidian maintainers are tracked in the project's Git history.
+    This file is part of Notional and is licensed under the GNU General Public License v3.0.
+    Modifications by the Notional maintainers are tracked in the project's Git history.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ export class NObsidianSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 
 		containerEl.empty();
-		containerEl.createEl("h2", { text: "nObsidian settings" });
+		containerEl.createEl("h2", { text: "Notional settings" });
 
 		this.renderConnectSection(containerEl);
 		this.renderDatabaseSection(containerEl);
@@ -145,7 +145,7 @@ export class NObsidianSettingTab extends PluginSettingTab {
 
 		this.createTextSetting(containerEl, {
 			name: "Notion parent page link",
-			desc: "Paste the link of a Notion page you've shared with your connection. nObsidian creates a database there to hold your notes.",
+			desc: "Paste the link of a Notion page you've shared with your connection. Notional creates a database there to hold your notes.",
 			placeholder: "https://www.notion.so/Your-Page-…",
 			settingKey: "notionParentPageUrl",
 			isPassword: false,
@@ -154,7 +154,7 @@ export class NObsidianSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Create notes database")
 			.setDesc(
-				"Creates the database nObsidian uploads into and remembers it for you."
+				"Creates the database Notional uploads into and remembers it for you."
 			)
 			.addButton((button) =>
 				button
