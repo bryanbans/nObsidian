@@ -26,6 +26,11 @@ export type PluginSettings = {
 	bannerUrl: string;
 	notionWorkspaceID: string;
 	allowTags: boolean;
+	// Auto-sync: push a linked note shortly after editing, and periodically
+	// pull the open note from Notion. Off by default; never auto-resolves
+	// conflicts.
+	autoSync: boolean;
+	autoSyncIntervalMinutes: number;
 };
 
 export type StringKeys<T> = Exclude<

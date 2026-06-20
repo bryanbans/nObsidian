@@ -104,6 +104,11 @@ export class SyncView extends ItemView {
 		// Events registered via registerEvent are cleaned up automatically.
 	}
 
+	// Allow the plugin to refresh the panel after a background auto-sync.
+	async refreshNow(): Promise<void> {
+		await this.refresh();
+	}
+
 	private logActivity(ok: boolean, message: string): void {
 		this.activity.unshift({ time: Date.now(), ok, message });
 		if (this.activity.length > 20) this.activity.pop();

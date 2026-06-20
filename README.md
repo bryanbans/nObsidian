@@ -23,6 +23,9 @@ conflict detection.
 - Sync the current note in the direction implied by stored sync timestamps.
 - Stop before overwriting when both Notion and Obsidian changed since the last
   recorded sync.
+- Optional automatic sync (experimental): push a linked note shortly after you
+  edit it and periodically pull the open note, with conflicts deferred to the
+  panel.
 
 ## Status
 
@@ -101,6 +104,11 @@ Open **Settings → nObsidian** and follow the two steps:
 
 Other settings:
 
+- **Automatic sync (experimental)** — off by default. When on, a linked note is
+  pushed to Notion a few seconds after you stop editing it, and the open note is
+  periodically pulled. Conflicts are never auto-resolved — they surface in the
+  sync panel. **Poll interval (minutes)** controls how often the open note is
+  checked for Notion-side changes.
 - **Banner URL** — image URL used as a page banner.
 - **Notion Workspace ID** — formats share links as
   `https://<workspace>.notion.site/`.
@@ -125,11 +133,13 @@ work.
 
 ## Current Limitations
 
-- Notion-to-Obsidian conversion supports a conservative block subset:
-  paragraphs, headings, bullets, numbered lists, todos, quotes, code blocks,
-  and dividers.
-- Automatic background sync is not enabled yet. Syncing is driven from the sync
-  panel or the command palette.
+- Notion-to-Obsidian conversion covers common blocks (paragraphs, headings,
+  lists, todos, quotes, code, dividers, images, tables, callouts, toggles,
+  equations, and media links). Anything else is flagged, not dropped (see
+  below).
+- Automatic sync is opt-in and scoped to the note you're working on (push on
+  edit, periodic pull of the open note); it is not a full continuous
+  whole-vault sync.
 - Conflict resolution is a "keep one side" choice (push or force-pull); there is
   no line-level merge UI.
 - Notion blocks outside the supported subset are not converted, but they are
@@ -146,17 +156,19 @@ Recently landed:
 - Sync side panel with one-click actions and explicit conflict resolution.
 - Guided setup: a *Test connection* button and auto-created notes database, so
   you never copy a database ID by hand.
+- Wider Notion → Obsidian block coverage (tables, callouts, toggles, images,
+  equations, media), with unsupported blocks flagged instead of dropped.
+- Rate-limit/transient-error retry with backoff on all Notion requests.
+- Automatic sync (experimental, opt-in): push on edit + periodic pull of the
+  open note, deferring conflicts to the panel.
 
 Planned, roughly in priority order:
 
 - [ ] **One-click OAuth ("Connect to Notion")** — authorize in the browser and
       pick pages with Notion's own picker, removing the token / sharing steps
       entirely. Needs a small hosted token-exchange endpoint.
-- [ ] **Automatic background sync** — debounced on save plus periodic polling,
-      deferring to the panel's conflict resolution instead of overwriting.
-- [ ] **Wider Notion → Obsidian block coverage** — tables, callouts, toggles,
-      nested lists, and images, to reduce content loss on pull.
-- [ ] **Front-matter preservation hardening** with round-trip tests.
+- [ ] **Whole-vault background sync** — extend auto-sync beyond the open note to
+      all linked notes, safely and within rate limits.
 - [ ] A dedicated sync-state store instead of ad hoc front-matter fields.
 - [ ] Submit to the Obsidian community plugin store after a guideline audit.
 

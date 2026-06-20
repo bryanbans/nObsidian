@@ -41,7 +41,36 @@ export class NObsidianSettingTab extends PluginSettingTab {
 
 		this.renderConnectSection(containerEl);
 		this.renderDatabaseSection(containerEl);
+		this.renderAutoSyncSection(containerEl);
 		this.renderAdvancedSection(containerEl);
+	}
+
+	private renderAutoSyncSection(containerEl: HTMLElement): void {
+		containerEl.createEl("h3", { text: "Automatic sync" });
+
+		this.createToggleSetting(containerEl, {
+			name: "Automatic sync (experimental)",
+			desc: "Push a linked note to Notion shortly after you edit it, and periodically pull the open note. Conflicts are never auto-resolved — they appear in the sync panel.",
+			settingKey: "autoSync",
+		});
+
+		new Setting(containerEl)
+			.setName("Poll interval (minutes)")
+			.setDesc(
+				"How often to check the open note for Notion-side changes."
+			)
+			.addText((text) =>
+				text
+					.setValue(
+						String(this.plugin.settings.autoSyncIntervalMinutes)
+					)
+					.onChange(async (value) => {
+						const parsed = Number.parseInt(value, 10);
+						this.plugin.settings.autoSyncIntervalMinutes =
+							Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
+						await this.plugin.saveSettings();
+					})
+			);
 	}
 
 	private renderConnectSection(containerEl: HTMLElement): void {

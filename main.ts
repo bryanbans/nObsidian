@@ -19,7 +19,14 @@
     along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { App, Notice, Plugin, PluginManifest, TFile } from "obsidian";
+import {
+	App,
+	Notice,
+	Plugin,
+	PluginManifest,
+	TFile,
+	debounce,
+} from "obsidian";
 import * as yamlFrontMatter from "yaml-front-matter";
 import {
 	PluginSettings,
@@ -45,6 +52,8 @@ const DEFAULT_SETTINGS: PluginSettings = {
 	bannerUrl: "",
 	notionWorkspaceID: "",
 	allowTags: false,
+	autoSync: false,
+	autoSyncIntervalMinutes: 5,
 };
 
 const BULK_UPLOAD_CONCURRENCY = 3;
@@ -53,6 +62,12 @@ export default class NObsidian extends Plugin {
 	settings: PluginSettings;
 	message: { [key: string]: string };
 	fileNameToFile: Map<string, TFile>;
+
+	// Auto-sync bookkeeping.
+	private suppressModify: Map<string, number> = new Map();
+	private conflictNotified: Set<string> = new Set();
+	private autoSyncDebouncers: Map<string, () => void> = new Map();
+	private lastAutoPoll = 0;
 
 	constructor(app: App, manifest: PluginManifest) {
 		super(app, manifest);
@@ -91,6 +106,9 @@ export default class NObsidian extends Plugin {
 
 		// Register events
 		this.registerCustomEvents();
+
+		// Wire up optional automatic background sync.
+		this.registerAutoSync();
 
 		// Add settings tab to plugin
 		this.addSettingTab(new NObsidianSettingTab(this.app, this));
@@ -299,7 +317,99 @@ export default class NObsidian extends Plugin {
 	}
 
 	async updateMarkdownFile(file: TFile, newContent: string): Promise<void> {
+		// Mark this write so the auto-sync modify handler ignores our own edit.
+		this.suppressModify.set(file.path, Date.now());
 		await file.vault.modify(file, newContent);
+	}
+
+	private registerAutoSync() {
+		const AUTO_SYNC_DEBOUNCE_MS = 3000;
+		const SUPPRESS_WINDOW_MS = 2000;
+
+		// Push a linked note shortly after the user stops editing it.
+		this.registerEvent(
+			this.app.vault.on("modify", (file) => {
+				if (!(file instanceof TFile)) return;
+				if (!this.settings.autoSync) return;
+				if (file.extension !== "md") return;
+				if (!this.hasValidNotionCredentials()) return;
+
+				const suppressedAt = this.suppressModify.get(file.path);
+				if (
+					suppressedAt &&
+					Date.now() - suppressedAt < SUPPRESS_WINDOW_MS
+				) {
+					return;
+				}
+
+				let debounced = this.autoSyncDebouncers.get(file.path);
+				if (!debounced) {
+					debounced = debounce(
+						() => {
+							void this.autoSyncFile(file);
+						},
+						AUTO_SYNC_DEBOUNCE_MS,
+						true
+					);
+					this.autoSyncDebouncers.set(file.path, debounced);
+				}
+				debounced();
+			})
+		);
+
+		// Periodically pull the open note. A 60s ticker checks against the
+		// configured interval so changing the interval needs no reload.
+		this.registerInterval(
+			window.setInterval(() => {
+				if (!this.settings.autoSync) return;
+				if (!this.hasValidNotionCredentials()) return;
+
+				const intervalMs =
+					Math.max(1, this.settings.autoSyncIntervalMinutes) * 60000;
+				if (Date.now() - this.lastAutoPoll < intervalMs) return;
+
+				this.lastAutoPoll = Date.now();
+				void this.pollOpenNote();
+			}, 60000)
+		);
+	}
+
+	private async autoSyncFile(file: TFile) {
+		// Only manage notes already linked to Notion; never auto-create pages.
+		const contentWithFrontMatter = await this.getContent(file);
+		if (!contentWithFrontMatter.notionPageId) return;
+
+		const result = await syncFile(this, file);
+
+		if (result.error) {
+			if (/conflict/i.test(result.error.message)) {
+				if (!this.conflictNotified.has(file.path)) {
+					this.conflictNotified.add(file.path);
+					new Notice(
+						`Sync conflict in “${file.basename}” — resolve it in the Nobsidion sync panel.`,
+						8000
+					);
+				}
+			}
+			// Other background errors stay quiet to avoid noise.
+		} else {
+			this.conflictNotified.delete(file.path);
+		}
+
+		this.refreshSyncViews();
+	}
+
+	private async pollOpenNote() {
+		const file = this.app.workspace.getActiveFile();
+		if (!file || file.extension !== "md") return;
+		await this.autoSyncFile(file);
+	}
+
+	private refreshSyncViews() {
+		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_SYNC)) {
+			const view = leaf.view;
+			if (view instanceof SyncView) void view.refreshNow();
+		}
 	}
 
 	displayResult(uploadResult: ServiceResult, pageName: string) {

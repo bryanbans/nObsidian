@@ -15,6 +15,8 @@ const settings: PluginSettings = {
 	bannerUrl: "",
 	notionWorkspaceID: "",
 	allowTags: false,
+	autoSync: false,
+	autoSyncIntervalMinutes: 5,
 };
 
 const paragraph = (content: string) => ({
