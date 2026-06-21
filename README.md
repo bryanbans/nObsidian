@@ -1,23 +1,49 @@
 # Notional
 
-Sync Obsidian notes with Notion pages without turning your vault into a
-one-way export graveyard.
+A practical Obsidian to Notion sync plugin for people who write in Markdown but
+need to collaborate, publish, or report in Notion.
 
-Notional is a maintained Obsidian plugin for people who write in Markdown, live
-in Notion with teams or clients, and want the two worlds to stay connected. It
-started as a fork of the abandoned Nobsidion plugin; today it is being rebuilt
-into a practical, reviewable, two-way sync tool with explicit conflict handling
-and no silent overwrites.
+Notional keeps Obsidian notes and Notion pages connected without turning your
+vault into a one-way export folder. It is built for knowledge workers who want
+Obsidian as their thinking environment and Notion as a shared workspace, client
+portal, project hub, or lightweight CMS.
 
 [![Latest release](https://img.shields.io/github/v/release/bryanbans/Notional?label=release)](https://github.com/bryanbans/Notional/releases)
 [![CI](https://github.com/bryanbans/Notional/actions/workflows/ci.yml/badge.svg)](https://github.com/bryanbans/Notional/actions/workflows/ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.13.0%2B-7c3aed)](manifest.json)
 
-> The point is not to make Notion replace Obsidian, or Obsidian replace Notion.
-> The point is to keep the same note understandable on both sides.
+Notional started as a maintained fork of the abandoned Nobsidion plugin. The
+current goal is broader: a reliable, inspectable, two-way sync tool with clear
+conflict handling and no silent overwrites.
 
-## What It Does
+## Why Notional Exists
+
+Many teams split their work across two very different tools:
+
+- Obsidian is excellent for private notes, local Markdown, backlink-heavy
+  research, and fast writing.
+- Notion is excellent for shared workspaces, databases, client-facing pages,
+  planning boards, and team review.
+
+The problem is the handoff. Copying Markdown into Notion breaks links, loses
+structure, and creates stale duplicates. Exporting everything is too blunt.
+Manual round-tripping is error-prone.
+
+Notional is designed to make that handoff deliberate, repeatable, and safer.
+
+## Real-World Use Cases
+
+| Situation | Problem | How Notional helps |
+| --- | --- | --- |
+| Consultant notes to client portal | You draft privately in Obsidian, but clients expect polished Notion pages. | Push selected notes or a project folder into Notion while keeping Obsidian as the source workspace. |
+| Research to team knowledge base | Your research notes contain wiki-links and nested outlines that become flat, broken copy-paste dumps. | Convert wiki-links into Notion page mentions and preserve nested structure through recursive block upload. |
+| Meeting notes to shared follow-up | Notes start locally during calls, then need to become shared Notion documentation. | Upload the active note, link it to a Notion page, and continue syncing updates intentionally. |
+| Product or engineering docs | Drafting is faster in Markdown, but review and discovery happen in Notion. | Keep local Markdown files linked to Notion pages with timestamp-based conflict checks. |
+| Personal knowledge to public workspace | You want to publish only a subset of your vault, not expose every local file path. | Current-folder upload avoids default whole-vault enumeration and keeps publishing scoped. |
+| Notion edits back to Obsidian | Teammates adjust a Notion page after you pushed it. | Pull supported Notion blocks back into the linked Obsidian note, with conflicts surfaced before overwrite. |
+
+## Core Capabilities
 
 | Capability | Status |
 | --- | --- |
@@ -30,18 +56,18 @@ and no silent overwrites.
 | Detect local-vs-remote conflicts | Working |
 | Automatic sync | Experimental, opt-in |
 
-## The Sync Contract
+## Sync Model
 
-Notional is intentionally conservative:
+Notional is intentionally conservative.
 
-1. A note gets linked to a Notion page through YAML front matter.
-2. Push writes Markdown content into Notion blocks.
+1. A note is linked to a Notion page through YAML front matter.
+2. Push converts Markdown into Notion blocks.
 3. Pull converts supported Notion blocks back into Markdown.
-4. Sync chooses a direction from timestamps.
-5. If both sides changed, Notional stops and asks you which side to keep.
+4. Sync chooses a direction from stored timestamps.
+5. If both sides changed, Notional stops and asks which side to keep.
 
-No hidden merge magic. No background overwrite surprise. If the plugin is not
-confident, it pauses.
+There is no hidden merge magic. There is no background overwrite surprise. If
+Notional is not confident, it pauses and lets you decide.
 
 ## Quick Start
 
@@ -74,8 +100,8 @@ In Settings -> Notional:
 4. Share a Notion parent page with that connection.
 5. Paste the page link into Notional and click Create notes database.
 
-Notional creates the database for you. You do not need to hunt for a database
-ID unless you want to use an existing database manually.
+Notional creates the database for you. You do not need to hunt for a database ID
+unless you want to use an existing database manually.
 
 ### 3. Sync a Note
 
@@ -100,7 +126,7 @@ timestamp-based path.
 
 ## Sync Panel
 
-The side panel is the cockpit:
+The side panel is the operational view for the active note:
 
 - linked or unlinked state
 - last local sync time
@@ -117,7 +143,7 @@ When a conflict appears, Notional gives you two deliberate choices:
 
 ## Metadata
 
-Notional stores its sync state in the note itself:
+Notional stores sync state in each note's YAML front matter:
 
 ```yaml
 notionPageId: ...
@@ -130,7 +156,7 @@ That makes the link portable with the file and keeps the current implementation
 easy to inspect. A dedicated sync-state store is on the roadmap for richer
 whole-vault automation.
 
-## Under The Hood
+## Architecture
 
 ```mermaid
 flowchart LR
@@ -150,7 +176,7 @@ The code is split around the sync pipeline:
 
 | File | Responsibility |
 | --- | --- |
-| `main.ts` | Plugin lifecycle, commands, vault file map, autosync wiring |
+| `main.ts` | Plugin lifecycle, commands, scoped folder upload, autosync wiring |
 | `view.ts` | Sync side panel and conflict actions |
 | `settingTab.ts` | Notion connection and setup UI |
 | `service/index.ts` | Upload, pull, sync orchestration |
@@ -173,7 +199,7 @@ The code is split around the sync pipeline:
 
 Recently shipped:
 
-- parallel current-folder upload that avoids whole-vault file enumeration
+- scoped current-folder upload that avoids whole-vault file enumeration
 - deep nested block append
 - wiki-links as Notion page mentions
 - pull and sync commands
