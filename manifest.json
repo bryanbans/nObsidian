@@ -1,7 +1,7 @@
 {
 	"id": "notional",
 	"name": "Notional",
-	"version": "1.1.8",
+	"version": "1.1.9",
 	"minAppVersion": "1.7.2",
 	"description": "Sync your notes to Notion pages, converting wiki-links along the way.",
 	"author": "bryanbans",

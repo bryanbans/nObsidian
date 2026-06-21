@@ -1,7 +1,7 @@
 name: Release Obsidian plugin
 
 # Tag a commit with the exact manifest.json version (no leading "v"), push it,
-# and this builds the plugin and drafts a GitHub release with the three assets
+# and this builds the plugin and publishes a GitHub release with the three assets
 # Obsidian/BRAT need: main.js, manifest.json, styles.css.
 on:
   push:
@@ -40,7 +40,7 @@ jobs:
             manifest.json
             styles.css
 
-      - name: Draft GitHub release with plugin assets
+      - name: Publish GitHub release with plugin assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
@@ -50,7 +50,6 @@ jobs:
           if [[ "$tag" == *-* ]]; then prerelease="--prerelease"; fi
           gh release create "$tag" \
             --title="$tag" \
-            --draft \
             $prerelease \
             --generate-notes \
             main.js manifest.json styles.css
