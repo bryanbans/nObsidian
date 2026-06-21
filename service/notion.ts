@@ -19,11 +19,9 @@
     along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call -- wraps Notion's untyped JSON REST API; response shapes are dynamic */
-
 import { RequestUrlParam, RequestUrlResponse, requestUrl } from "obsidian";
 import { markdownToBlocks } from "@tryfabric/martian";
-import { PluginSettings, ServiceResult } from "./types";
+import { NotionPage, PluginSettings, ServiceResult } from "./types";
 import { getNotionPageMentionId } from "./utils";
 
 // Notion requires every request to pin an API version. Keep this current with
@@ -31,18 +29,58 @@ import { getNotionPageMentionId } from "./utils";
 const NOTION_VERSION = "2022-06-28";
 const MAX_BLOCKS_PER_APPEND = 100;
 
+// Minimal shapes for the parts of Notion's JSON responses this plugin reads.
+type NotionRichText = {
+	plain_text?: string;
+	href?: string | null;
+	text?: { content?: string; link?: { url?: string } | null };
+	annotations?: unknown;
+};
+
+type NotionMedia = {
+	url?: string;
+	name?: string;
+	caption?: NotionRichText[];
+	external?: { url?: string };
+	file?: { url?: string };
+};
+
+type RichTextHolder = { rich_text?: NotionRichText[] };
+
 type NotionBlock = {
 	id?: string;
 	type?: string;
 	has_children?: boolean;
-	[key: string]: any;
+	children?: NotionBlock[];
+	paragraph?: RichTextHolder;
+	heading_1?: RichTextHolder;
+	heading_2?: RichTextHolder;
+	heading_3?: RichTextHolder;
+	bulleted_list_item?: RichTextHolder;
+	numbered_list_item?: RichTextHolder;
+	to_do?: RichTextHolder & { checked?: boolean };
+	quote?: RichTextHolder;
+	code?: RichTextHolder & { language?: string };
+	callout?: RichTextHolder;
+	toggle?: RichTextHolder;
+	equation?: { expression?: string };
+	image?: NotionMedia & { caption?: NotionRichText[] };
+	table?: { table_width?: number; has_column_header?: boolean };
+	table_row?: { cells?: NotionRichText[][] };
+	bookmark?: NotionMedia;
+	embed?: NotionMedia;
+	link_preview?: NotionMedia;
+	video?: NotionMedia;
+	file?: NotionMedia;
+	pdf?: NotionMedia;
+	audio?: NotionMedia;
+	[key: string]: unknown;
 };
 
-type NotionPage = {
-	id: string;
-	url?: string;
-	last_edited_time?: string;
-	[key: string]: any;
+type BlockChildrenResponse = {
+	results?: NotionBlock[];
+	has_more?: boolean;
+	next_cursor?: string | null;
 };
 
 const RETRYABLE_STATUSES = new Set([429, 502, 503, 504]);
@@ -66,17 +104,14 @@ const notionRequest = async (
 		const retryable = RETRYABLE_STATUSES.has(response.status);
 		if (!retryable || attempt >= MAX_RETRIES) {
 			let detail = `status ${response.status}`;
-			try {
-				if (response.json?.message) detail = response.json.message;
-			} catch {
-				// non-JSON body; keep the status text
-			}
+			const body = response.json as { message?: string } | undefined;
+			if (body?.message) detail = body.message;
 			throw Error(`Notion API ${response.status}: ${detail}`);
 		}
 
+		const headers = response.headers ?? {};
 		const retryAfter = Number(
-			response.headers?.["retry-after"] ??
-				response.headers?.["Retry-After"]
+			headers["retry-after"] ?? headers["Retry-After"]
 		);
 		const backoff =
 			Number.isFinite(retryAfter) && retryAfter > 0
@@ -90,7 +125,9 @@ const getBlockChildren = (block: NotionBlock): NotionBlock[] => {
 	if (Array.isArray(block.children)) return block.children;
 	if (!block.type) return [];
 
-	const typedBlock = block[block.type];
+	const typedBlock = block[block.type] as
+		| { children?: NotionBlock[] }
+		| undefined;
 	if (!typedBlock || !Array.isArray(typedBlock.children)) return [];
 
 	return typedBlock.children;
@@ -104,11 +141,13 @@ const hasNestedChildren = (block: NotionBlock): boolean => {
 };
 
 const removeBlockChildren = (block: NotionBlock): NotionBlock => {
-	const blockWithoutChildren = { ...block };
+	const blockWithoutChildren: NotionBlock = { ...block };
 	delete blockWithoutChildren.children;
 
 	if (block.type && blockWithoutChildren[block.type]) {
-		const typedBlock = { ...blockWithoutChildren[block.type] };
+		const typedBlock = {
+			...(blockWithoutChildren[block.type] as Record<string, unknown>),
+		};
 		delete typedBlock.children;
 		blockWithoutChildren[block.type] = typedBlock;
 	}
@@ -132,7 +171,7 @@ const appendBlockChildren = async (
 	settings: PluginSettings,
 	blockId: string,
 	blocks: NotionBlock[]
-) => {
+): Promise<RequestUrlResponse> => {
 	const notionAPIToken = settings.notionAPIToken;
 
 	return notionRequest({
@@ -151,8 +190,8 @@ const appendBlocksRecursively = async (
 	settings: PluginSettings,
 	parentBlockId: string,
 	blocks: NotionBlock[]
-) => {
-	let lastResponse = null;
+): Promise<RequestUrlResponse | null> => {
+	let lastResponse: RequestUrlResponse | null = null;
 
 	for (const chunk of chunkBlocks(blocks)) {
 		const appendableBlocks = chunk.map(prepareBlockForAppend);
@@ -162,7 +201,10 @@ const appendBlocksRecursively = async (
 			appendableBlocks
 		);
 
-		const createdBlocks = lastResponse.json?.results || [];
+		const json = lastResponse.json as
+			| { results?: { id?: string }[] }
+			| undefined;
+		const createdBlocks = json?.results ?? [];
 		for (const [index, originalBlock] of chunk.entries()) {
 			if (!hasNestedChildren(originalBlock)) continue;
 
@@ -192,15 +234,17 @@ const getJsonHeaders = (settings: PluginSettings) => ({
 	...getAuthHeaders(settings),
 });
 
-const convertPageMentionLinks = (value: any): any => {
+const convertPageMentionLinks = (value: unknown): unknown => {
 	if (Array.isArray(value)) {
 		return value.map(convertPageMentionLinks);
 	}
 
 	if (!value || typeof value !== "object") return value;
 
-	const notionPageId = getNotionPageMentionId(value.text?.link?.url || "");
-	if (value.type === "text" && notionPageId) {
+	const record = value as Record<string, unknown>;
+	const textNode = record.text as { link?: { url?: string } } | undefined;
+	const notionPageId = getNotionPageMentionId(textNode?.link?.url || "");
+	if (record.type === "text" && notionPageId) {
 		return {
 			type: "mention",
 			mention: {
@@ -209,11 +253,11 @@ const convertPageMentionLinks = (value: any): any => {
 					id: notionPageId,
 				},
 			},
-			annotations: value.annotations,
+			annotations: record.annotations,
 		};
 	}
 
-	const convertedValue = { ...value };
+	const convertedValue: Record<string, unknown> = { ...record };
 	for (const key of Object.keys(convertedValue)) {
 		convertedValue[key] = convertPageMentionLinks(convertedValue[key]);
 	}
@@ -221,7 +265,7 @@ const convertPageMentionLinks = (value: any): any => {
 	return convertedValue;
 };
 
-const richTextToMarkdown = (richText: any[] = []): string => {
+const richTextToMarkdown = (richText: NotionRichText[] = []): string => {
 	return richText
 		.map((text) => {
 			const plainText = text.plain_text || text.text?.content || "";
@@ -259,7 +303,7 @@ const IGNORED_BLOCK_TYPES = new Set([
 ]);
 
 const mediaLinkToMarkdown = (block: NotionBlock, type: string): string => {
-	const typed = block[type] || {};
+	const typed = (block[type] as NotionMedia | undefined) ?? {};
 	const url = typed.url || typed.external?.url || typed.file?.url || "";
 	if (!url) return "";
 
@@ -274,7 +318,7 @@ const tableToMarkdown = (block: NotionBlock): string => {
 	if (rows.length === 0) return "";
 
 	const toCells = (row: NotionBlock): string[] =>
-		(row.table_row?.cells || []).map((cell: any[]) =>
+		(row.table_row?.cells ?? []).map((cell) =>
 			richTextToMarkdown(cell).replace(/\|/g, "\\|").replace(/\n/g, " ").trim()
 		);
 
@@ -290,7 +334,11 @@ const tableToMarkdown = (block: NotionBlock): string => {
 	].join("\n");
 };
 
-const calloutToMarkdown = (text: string, body: string, foldable = false): string => {
+const calloutToMarkdown = (
+	text: string,
+	body: string,
+	foldable = false
+): string => {
 	const lines = [`> [!note]${foldable ? "-" : ""} ${text}`.trimEnd()];
 	if (body) {
 		for (const line of body.split("\n")) {
@@ -375,7 +423,11 @@ const blockToMarkdown = (block: NotionBlock): string => {
 			// Unknown/unsupported type: never drop it silently. Preserve any
 			// text, nested children, and media URL, and flag it so the user
 			// knows the conversion was imperfect.
-			const typed = block.type ? block[block.type] : undefined;
+			const typed = block.type
+				? (block[block.type] as
+						| (NotionMedia & RichTextHolder)
+						| undefined)
+				: undefined;
 			const text = typed?.rich_text
 				? richTextToMarkdown(typed.rich_text)
 				: "";
@@ -431,7 +483,7 @@ const retrievePage = async (
 	settings: PluginSettings,
 	notionPageId: string
 ): Promise<ServiceResult> => {
-	let res = null;
+	let res: RequestUrlResponse | null = null;
 
 	try {
 		res = await notionRequest({
@@ -440,7 +492,7 @@ const retrievePage = async (
 			headers: getAuthHeaders(settings),
 		});
 
-		return { data: res.json, error: null };
+		return { data: res.json as NotionPage, error: null };
 	} catch (error) {
 		return {
 			data: res,
@@ -453,7 +505,7 @@ const retrieveBlockChildren = async (
 	settings: PluginSettings,
 	blockId: string
 ): Promise<ServiceResult> => {
-	let res = null;
+	let res: RequestUrlResponse | null = null;
 	const blocks: NotionBlock[] = [];
 	let startCursor: string | null = null;
 
@@ -468,23 +520,26 @@ const retrieveBlockChildren = async (
 				headers: getAuthHeaders(settings),
 			});
 
-			for (const block of res.json.results || []) {
-				if (block.has_children) {
+			const json = res.json as BlockChildrenResponse;
+			for (const block of json.results ?? []) {
+				const typeKey = block.type;
+				if (block.has_children && typeKey) {
 					const childrenResult = await retrieveBlockChildren(
 						settings,
-						block.id
+						block.id ?? ""
 					);
 					if (childrenResult.error) return childrenResult;
-					const typedBlock = block[block.type] || {};
-					block[block.type] = {
+					const typedBlock =
+						(block[typeKey] as Record<string, unknown>) ?? {};
+					block[typeKey] = {
 						...typedBlock,
-						children: childrenResult.data,
+						children: childrenResult.data as NotionBlock[],
 					};
 				}
 				blocks.push(block);
 			}
 
-			startCursor = res.json.has_more ? res.json.next_cursor : null;
+			startCursor = json.has_more ? json.next_cursor ?? null : null;
 		} while (startCursor);
 
 		return { data: blocks, error: null };
@@ -509,7 +564,7 @@ const retrievePageMarkdown = async (
 	return {
 		data: {
 			page: pageResult.data as NotionPage,
-			markdown: blocksToMarkdown(childrenResult.data),
+			markdown: blocksToMarkdown(childrenResult.data as NotionBlock[]),
 		},
 		error: null,
 	};
@@ -518,7 +573,7 @@ const retrievePageMarkdown = async (
 const validateToken = async (
 	settings: PluginSettings
 ): Promise<ServiceResult> => {
-	let res = null;
+	let res: RequestUrlResponse | null = null;
 
 	try {
 		res = await notionRequest({
@@ -527,7 +582,7 @@ const validateToken = async (
 			headers: getAuthHeaders(settings),
 		});
 
-		return { data: res.json, error: null };
+		return { data: res.json as { name?: string }, error: null };
 	} catch (error) {
 		return {
 			data: res,
@@ -540,7 +595,7 @@ const retrieveDatabase = async (
 	settings: PluginSettings,
 	databaseId: string
 ): Promise<ServiceResult> => {
-	let res = null;
+	let res: RequestUrlResponse | null = null;
 
 	try {
 		res = await notionRequest({
@@ -549,7 +604,7 @@ const retrieveDatabase = async (
 			headers: getAuthHeaders(settings),
 		});
 
-		return { data: res.json, error: null };
+		return { data: res.json as NotionPage, error: null };
 	} catch (error) {
 		return {
 			data: res,
@@ -563,7 +618,7 @@ const createDatabase = async (
 	parentPageId: string,
 	title = "Obsidian Notes"
 ): Promise<ServiceResult> => {
-	let res = null;
+	let res: RequestUrlResponse | null = null;
 
 	const body = {
 		parent: { type: "page_id", page_id: parentPageId },
@@ -584,7 +639,7 @@ const createDatabase = async (
 			body: JSON.stringify(body),
 		});
 
-		return { data: res.json, error: null };
+		return { data: res.json as { id?: string }, error: null };
 	} catch (error) {
 		return {
 			data: res,
@@ -598,11 +653,11 @@ const createEmptyPage = async (
 	title: string,
 	tags: string[] = []
 ): Promise<ServiceResult> => {
-	let res = null;
+	let res: RequestUrlResponse | null = null;
 
 	const { databaseID, allowTags, bannerUrl } = settings;
 
-	const bodyString: any = {
+	const bodyString: Record<string, unknown> = {
 		parent: { database_id: databaseID },
 		properties: {
 			Name: {
@@ -632,7 +687,7 @@ const createEmptyPage = async (
 			body: JSON.stringify(bodyString),
 		});
 
-		return { data: res.json, error: null };
+		return { data: res.json as NotionPage, error: null };
 	} catch (error) {
 		return {
 			data: res,
@@ -646,13 +701,16 @@ const addContentToPage = async (
 	notionPageId: string,
 	content: string
 ): Promise<ServiceResult> => {
-	let res = null;
+	let res: RequestUrlResponse | null = null;
 
-	const blocks = convertPageMentionLinks(markdownToBlocks(content));
+	const blocks = convertPageMentionLinks(
+		markdownToBlocks(content)
+	) as NotionBlock[];
 
 	try {
 		res = await appendBlocksRecursively(settings, notionPageId, blocks);
-		return { data: res?.json || null, error: null };
+		const responseJson: unknown = res?.json;
+		return { data: responseJson ?? null, error: null };
 	} catch (error) {
 		return {
 			data: res,
@@ -676,11 +734,14 @@ const clearPageContent = async (
 		});
 
 		// Check if the response contains blocks and delete them if it does
-		if (listResponse && listResponse.json && listResponse.json.results) {
-			for (const block of listResponse.json.results) {
+		const json = listResponse.json as
+			| { results?: { id?: string }[] }
+			| undefined;
+		if (json?.results) {
+			for (const block of json.results) {
 				// Each block has an ID, which you can use to delete it
 				await notionRequest({
-					url: `https://api.notion.com/v1/blocks/${block.id}`,
+					url: `https://api.notion.com/v1/blocks/${block.id ?? ""}`,
 					method: "DELETE",
 					headers: {
 						...getAuthHeaders(settings),

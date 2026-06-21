@@ -262,7 +262,7 @@ export default class NObsidian extends Plugin {
 	}
 
 	async pullCurrentNote() {
-		if (!this.hasValidNotionCredentials()) {
+		if (!this.hasValidNotionToken()) {
 			new Notice(this.message["config-settings"]);
 			return;
 		}
@@ -278,7 +278,7 @@ export default class NObsidian extends Plugin {
 	}
 
 	async syncCurrentNote() {
-		if (!this.hasValidNotionCredentials()) {
+		if (!this.hasValidNotionToken()) {
 			new Notice(this.message["config-settings"]);
 			return;
 		}
@@ -296,6 +296,10 @@ export default class NObsidian extends Plugin {
 	hasValidNotionCredentials() {
 		const { notionAPIToken, databaseID } = this.settings;
 		return notionAPIToken !== "" && databaseID !== "";
+	}
+
+	hasValidNotionToken() {
+		return this.settings.notionAPIToken !== "";
 	}
 
 	async uploadFile(file: TFile): Promise<ServiceResult> {
@@ -334,7 +338,7 @@ export default class NObsidian extends Plugin {
 				if (!(file instanceof TFile)) return;
 				if (!this.settings.autoSync) return;
 				if (file.extension !== "md") return;
-				if (!this.hasValidNotionCredentials()) return;
+				if (!this.hasValidNotionToken()) return;
 
 				const suppressedAt = this.suppressModify.get(file.path);
 				if (
@@ -364,7 +368,7 @@ export default class NObsidian extends Plugin {
 		this.registerInterval(
 			window.setInterval(() => {
 				if (!this.settings.autoSync) return;
-				if (!this.hasValidNotionCredentials()) return;
+				if (!this.hasValidNotionToken()) return;
 
 				const intervalMs =
 					Math.max(1, this.settings.autoSyncIntervalMinutes) * 60000;

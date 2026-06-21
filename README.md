@@ -29,7 +29,7 @@ conflict detection.
 
 ## Status
 
-`1.1.1` is released and installable (see [Installation](#installation)).
+`1.1.8` is the current release line (see [Installation](#installation)).
 Obsidian-to-Notion upload is the most mature path; the Notion-to-Obsidian
 pull/sync direction works but is conservative, and automatic sync is opt-in and
 experimental. Read [Current Limitations](#current-limitations) and test on
