@@ -1,7 +1,7 @@
 {
 	"id": "notional",
 	"name": "Notional",
-	"version": "1.2.1",
+	"version": "1.2.2",
 	"minAppVersion": "1.13.0",
 	"description": "Two-way sync for your Markdown notes and Notion: one-click connect, wiki-links become Notion page mentions, and conflict-aware Push/Pull that never overwrites silently.",
 	"author": "bryanbans",

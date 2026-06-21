@@ -1,6 +1,6 @@
 {
 	"name": "notional",
-	"version": "1.2.1",
+	"version": "1.2.2",
 	"description": "Two-way sync between your Markdown notes and Notion, with one-click connect and conflict-aware Push/Pull.",
 	"main": "main.js",
 	"scripts": {
